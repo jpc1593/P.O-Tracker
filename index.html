@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>PO Tracker</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--s1:#181b24;--s2:#1e2130;--s3:#252840;
+  --b1:#2e3250;--b2:#3a3f6a;
+  --t1:#e8eaf6;--t2:#9499c4;--t3:#5c6090;
+  --acc:#5b6ef5;--acc2:#7c8fff;--accbg:rgba(91,110,245,.12);
+  --grn:#3ecf8e;--grnbg:rgba(62,207,142,.1);
+  --amb:#f5a623;--ambbg:rgba(245,166,35,.1);
+  --red:#f5454a;--redbg:rgba(245,69,74,.1);
+  --tel:#22d3ee;--telbg:rgba(34,211,238,.1);
+  --pur:#a78bfa;--purbg:rgba(167,139,250,.1);
+  --r:12px;--rl:18px;
+  --touch:48px;
+}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--t1);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;min-height:100vh;line-height:1.5}
+button{cursor:pointer;font-family:inherit;font-size:14px;border:none;background:none;color:inherit;min-height:var(--touch);display:inline-flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+input,select,textarea{font-family:inherit;font-size:15px;background:var(--s2);border:1.5px solid var(--b1);color:var(--t1);border-radius:var(--r);padding:11px 14px;outline:none;width:100%;min-height:var(--touch)}
+input:focus,select:focus,textarea:focus{border-color:var(--acc);background:var(--s1)}
+input::placeholder,textarea::placeholder{color:var(--t3)}
+select option{background:var(--s2)}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%235c6090' d='M6 8L0 0h12z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+textarea{min-height:80px;resize:vertical}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:4px}
+
+/* Layout */
+#app{display:flex;flex-direction:column;min-height:100vh}
+#header{background:var(--s1);border-bottom:1px solid var(--b1);padding:0 16px;display:flex;align-items:center;gap:10px;height:56px;position:sticky;top:0;z-index:60}
+#logo{font-weight:800;font-size:16px;letter-spacing:.02em;white-space:nowrap;flex-shrink:0}
+#logo span{color:var(--acc2)}
+/* Bottom nav for mobile, top nav for desktop */
+#bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--s1);border-top:1px solid var(--b1);z-index:60;padding-bottom:env(safe-area-inset-bottom)}
+#bottom-nav button{flex:1;flex-direction:column;gap:3px;padding:8px 4px;color:var(--t3);font-size:10px;font-weight:500;min-height:52px;border-radius:0}
+#bottom-nav button.active{color:var(--acc2)}
+#bottom-nav button .nav-icon{font-size:20px;line-height:1}
+#desktop-nav{display:none}
+main{flex:1;padding:16px;padding-bottom:80px;max-width:1300px;width:100%;margin:0 auto}
+@media(min-width:768px){
+  #bottom-nav{display:none}
+  #desktop-nav{display:flex;gap:3px}
+  #desktop-nav button{padding:6px 14px;border-radius:8px;color:var(--t3);font-size:13px;transition:all .15s;white-space:nowrap;min-height:36px}
+  #desktop-nav button.active{color:var(--t1);background:var(--s3)}
+  #desktop-nav button:hover:not(.active){color:var(--t2)}
+  main{padding:20px;padding-bottom:20px}
+}
+#header-right{margin-left:auto;display:flex;gap:8px;align-items:center;flex-shrink:0}
+
+/* Search */
+#search-wrap{background:var(--s1);border-bottom:1px solid var(--b1);padding:10px 16px;position:relative;z-index:55}
+#search-inner{position:relative;max-width:640px}
+#gs-input{padding-left:42px;padding-right:40px;background:var(--s3);border-color:var(--b2);font-size:14px;height:44px;border-radius:22px}
+#gs-input:focus{border-color:var(--acc);background:var(--s2)}
+#gs-clear{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--t3);font-size:20px;cursor:pointer;line-height:1;display:none;min-height:auto;padding:0}
+#gs-dropdown{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--s2);border:1px solid var(--b2);border-radius:var(--rl);max-height:360px;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.6);z-index:999}
+#gs-dropdown.open{display:block}
+.gs-item{padding:13px 16px;border-bottom:1px solid var(--b1);cursor:pointer;display:flex;gap:12px;align-items:flex-start;min-height:var(--touch)}
+.gs-item:last-child{border-bottom:none}
+.gs-item:hover,.gs-item:active{background:var(--s3)}
+.gs-badge{font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:3px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;margin-top:2px}
+.gs-po{background:var(--accbg);color:var(--acc2)}.gs-sku{background:var(--grnbg);color:var(--grn)}.gs-si{background:var(--telbg);color:var(--tel)}.gs-cl{background:rgba(255,255,255,.06);color:var(--t2)}.gs-dr{background:var(--purbg);color:var(--pur)}
+.gs-body{flex:1;min-width:0}
+.gs-main{font-size:14px;font-weight:500;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gs-sub{font-size:12px;color:var(--t2);margin-top:2px}
+.gs-empty{padding:20px;text-align:center;color:var(--t3);font-size:13px}
+
+.demo-bar{background:var(--ambbg);border-bottom:1px solid var(--amb);padding:6px 16px;font-size:12px;color:var(--amb);text-align:center}
+
+/* Buttons */
+.btn{padding:0 18px;height:var(--touch);border-radius:var(--r);border:1.5px solid var(--b1);color:var(--t2);transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:500}
+.btn:hover,.btn:active{border-color:var(--b2);color:var(--t1);background:var(--s2)}
+.btn-pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+.btn-pri:hover,.btn-pri:active{background:var(--acc2);border-color:var(--acc2);color:#fff}
+.btn-sm{padding:0 14px;height:36px;font-size:13px}
+.btn-danger{color:var(--red);border-color:var(--redbg)}
+.btn-danger:hover,.btn-danger:active{background:var(--redbg);border-color:var(--red);color:var(--red)}
+.btn-icon{padding:0;width:var(--touch);height:var(--touch);border-radius:50%;border:none;font-size:18px}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.b-grn{background:var(--grnbg);color:var(--grn)}.b-amb{background:var(--ambbg);color:var(--amb)}.b-red{background:var(--redbg);color:var(--red)}.b-acc{background:var(--accbg);color:var(--acc2)}.b-tel{background:var(--telbg);color:var(--tel)}.b-gray{background:rgba(255,255,255,.07);color:var(--t2)}.b-pur{background:var(--purbg);color:var(--pur)}
+.b-vatinc{background:var(--grnbg);color:var(--grn);font-size:11px;padding:2px 8px}
+.b-vatex{background:var(--ambbg);color:var(--amb);font-size:11px;padding:2px 8px}
+
+/* Cards */
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--rl);padding:16px}
+.stat-card{background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);padding:14px 16px}
+.stat-label{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+
+/* Tables — scroll horizontally on mobile */
+.tbl-wrap{background:var(--s1);border:1px solid var(--b1);border-radius:var(--rl);overflow:hidden;overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;min-width:480px}
+th{text-align:left;padding:10px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);border-bottom:1px solid var(--b1);font-weight:600;white-space:nowrap}
+td{padding:13px 14px;border-bottom:1px solid var(--b1);vertical-align:middle;font-size:14px}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td,tbody tr:active td{background:rgba(255,255,255,.02)}
+.row-link{cursor:pointer}
+
+/* Progress bar */
+.prog{height:5px;background:var(--s3);border-radius:3px;overflow:hidden;min-width:55px}
+.prog-fill{height:100%;border-radius:3px;transition:width .4s}
+
+/* Forms */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;font-weight:600}
+.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+@media(max-width:480px){.form-row-2{grid-template-columns:1fr;gap:0}}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:100;display:flex;align-items:flex-end;justify-content:center;padding:0}
+@media(min-width:600px){.overlay{align-items:center;padding:20px}}
+.modal{background:var(--s1);border:1px solid var(--b2);border-radius:var(--rl) var(--rl) 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));width:100%;max-width:600px;max-height:92vh;overflow-y:auto}
+@media(min-width:600px){.modal{border-radius:var(--rl);padding:24px}}
+.modal-lg{max-width:740px}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+.modal-footer .btn{flex:1;justify-content:center}
+@media(min-width:480px){.modal-footer .btn{flex:0 0 auto}}
+/* Drag handle for bottom sheet */
+.sheet-handle{width:36px;height:4px;background:var(--b2);border-radius:2px;margin:0 auto 16px}
+
+/* Page */
+.page-title{font-size:22px;font-weight:800;margin-bottom:16px}
+.tag-rev{background:var(--ambbg);color:var(--amb);font-size:10px;padding:2px 6px;border-radius:4px;margin-left:5px}
+.empty{text-align:center;padding:40px 20px;color:var(--t3);font-size:14px}
+.err{color:var(--red);font-size:13px;margin-bottom:12px;padding:10px 14px;background:var(--redbg);border-radius:var(--r)}
+.hint{font-size:12px;color:var(--t3);margin-top:5px}
+.expand-row td{background:var(--s2)!important;border-bottom:2px solid var(--b2)}
+.sub-title{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-weight:600}
+.del-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--b1);font-size:13px;gap:10px}
+.rev-row{padding:8px 0;border-bottom:1px solid var(--b1);font-size:13px}
+.vat-note{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:4px 10px;border-radius:8px}
+.vat-inc{background:var(--grnbg);color:var(--grn)}.vat-ex{background:var(--ambbg);color:var(--amb)}
+.si-chip{display:inline-flex;align-items:center;background:var(--telbg);color:var(--tel);font-size:11px;padding:3px 9px;border-radius:20px;margin:2px 3px 2px 0}
+.detail-tabs{display:flex;border-bottom:1px solid var(--b1);margin-bottom:18px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.detail-tab{padding:12px 18px;font-size:13px;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap;min-height:var(--touch)}
+.detail-tab.active{color:var(--acc2);border-bottom-color:var(--acc2)}
+.notes-cell{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t3);font-size:12px;font-style:italic}
+.inline-edit{display:flex;gap:8px;align-items:flex-start}
+.inline-edit textarea{flex:1;font-size:14px}
+.pay-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;flex-shrink:0}
+.paid-dot{background:var(--grn)}.unpaid-dot{background:var(--red)}.partial-dot{background:var(--amb)}
+.dr-card{background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.dr-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+.dr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.dr-field{background:var(--s3);border-radius:8px;padding:9px 11px}
+.dr-field-label{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.dr-field-val{font-size:13px;color:var(--t2)}
+.pay-pill{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;min-height:36px}
+.pay-paid{background:var(--grnbg);color:var(--grn)}.pay-unpaid{background:var(--redbg);color:var(--red)}.pay-partial{background:var(--ambbg);color:var(--amb)}
+.section-divider{border:none;border-top:1px solid var(--b1);margin:14px 0}
+/* Action row on PO detail */
+.po-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.po-actions .btn{flex:1;min-width:100px;justify-content:center}
+@media(min-width:600px){.po-actions .btn{flex:0 0 auto}}
+/* Client cards clickable */
+.client-card{cursor:pointer;transition:border-color .15s,transform .1s}
+.client-card:hover{border-color:var(--b2)!important}
+.client-card:active{transform:scale(.98)}
+/* Confirm delete dialog */
+.confirm-box{background:var(--redbg);border:1px solid var(--red);border-radius:var(--r);padding:14px 16px;margin-bottom:12px}
+.confirm-box p{color:var(--t1);font-size:14px;margin-bottom:12px}
+.confirm-box .btn-row{display:flex;gap:8px}
+.confirm-box .btn-row .btn{flex:1;justify-content:center}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ── Initial Data ───────────────────────────────────────────────────────────
+const INIT_DB={
+  clients:[
+    {id:'c1',name:'Primeland Developers Inc.'},
+    {id:'c2',name:'Metro Infra Corp.'},
+    {id:'c3',name:'Greenfield Construction'},
+  ],
+  skus:[
+    {id:'s1',code:'3000PSI',description:'Regular 3000 PSI Mix',unit:'m3'},
+    {id:'s2',code:'4000PSI',description:'High-Strength 4000 PSI',unit:'m3'},
+    {id:'s3',code:'3500PSI-W',description:'3500 PSI Waterproof',unit:'m3'},
+  ],
+  pos:[
+    {id:'po1',po_number:'PO-2024-001',client_id:'c1',date:'2024-05-10',vat_type:'VAT_INC',notes:'Tower A Foundation',status:'OPEN'},
+    {id:'po2',po_number:'PO-2024-002',client_id:'c2',date:'2024-05-18',vat_type:'VAT_EX',notes:'Bridge Deck Phase 1',status:'OPEN'},
+    {id:'po3',po_number:'PO-2024-003',client_id:'c3',date:'2024-06-01',vat_type:'VAT_INC',notes:'Residential Slab',status:'OPEN'},
+  ],
+  po_skus:[
+    {id:'ps1',po_id:'po1',sku_id:'s1',ordered_qty:120,delivered_qty:75,base_price:4800,current_price:5100,notes:'Standard slump 100mm'},
+    {id:'ps2',po_id:'po1',sku_id:'s2',ordered_qty:60,delivered_qty:60,base_price:5500,current_price:5500,notes:'Admixture required'},
+    {id:'ps3',po_id:'po2',sku_id:'s1',ordered_qty:200,delivered_qty:0,base_price:4800,current_price:4800,notes:''},
+    {id:'ps4',po_id:'po2',sku_id:'s3',ordered_qty:80,delivered_qty:0,base_price:5200,current_price:5200,notes:'Waterproofing additive'},
+    {id:'ps5',po_id:'po3',sku_id:'s1',ordered_qty:50,delivered_qty:20,base_price:4900,current_price:4900,notes:''},
+  ],
+  revisions:[
+    {id:'r1',po_sku_id:'ps1',old_price:4800,new_price:5100,reason:'Cement price increase May 2024',date:'2024-05-20'},
+  ],
+  deliveries:[
+    {id:'d1',po_sku_id:'ps1',qty:40,date:'2024-05-12',notes:'Morning pour'},
+    {id:'d2',po_sku_id:'ps1',qty:35,date:'2024-05-16',notes:'Afternoon pour'},
+    {id:'d3',po_sku_id:'ps2',qty:60,date:'2024-05-14',notes:'Full delivery'},
+    {id:'d4',po_sku_id:'ps5',qty:20,date:'2024-06-03',notes:''},
+  ],
+  // Sales Invoices
+  sales_invoices:[
+    {id:'si1',po_id:'po1',si_number:'SI-2024-0045',date:'2024-05-15',amount:487500,notes:'Partial billing for 3000PSI deliveries',payment_status:'PARTIAL_PAID'},
+    {id:'si2',po_id:'po1',si_number:'SI-2024-0061',date:'2024-05-18',amount:330000,notes:'Final billing 4000PSI',payment_status:'UNPAID'},
+  ],
+  // Delivery Receipts — each linked to a sales_invoice
+  drs:[
+    {id:'dr1',si_id:'si1',dr_number:'DR-2024-0101',date:'2024-05-12',
+     truck_plate:'ABC 1234',driver_name:'Juan Dela Cruz',site_address:'Tower A, BGC Taguig',
+     client_name:'Primeland Developers Inc.',sku_id:'s1',volume:40,
+     site_inspector:'Engr. Santos',remarks:'Poured column footings',
+     payment_status:'PAID',payment_date:'2024-05-30',notes:''},
+    {id:'dr2',si_id:'si1',dr_number:'DR-2024-0112',date:'2024-05-16',
+     truck_plate:'XYZ 5678',driver_name:'Pedro Garcia',site_address:'Tower A, BGC Taguig',
+     client_name:'Primeland Developers Inc.',sku_id:'s1',volume:35,
+     site_inspector:'Engr. Santos',remarks:'2nd floor slab',
+     payment_status:'UNPAID',payment_date:'',notes:''},
+    {id:'dr3',si_id:'si2',dr_number:'DR-2024-0098',date:'2024-05-14',
+     truck_plate:'DEF 9012',driver_name:'Mario Reyes',site_address:'Tower A, BGC Taguig',
+     client_name:'Primeland Developers Inc.',sku_id:'s2',volume:60,
+     site_inspector:'Engr. Lim',remarks:'Full 4000PSI pour',
+     payment_status:'UNPAID',payment_date:'',notes:''},
+  ],
+};
+
+let state={
+  view:'dashboard',modal:null,selectedPO:null,detailTab:'skus',
+  search:'',filterStatus:'ALL',expandedSku:null,
+  gs:'',gsOpen:false,
+  editingSkuNote:null,editingSiNote:null,editingDrNote:null,
+  viewDR:null,
+  selectedClient:null,  // client id for client detail view
+  db:JSON.parse(JSON.stringify(INIT_DB)),
+};
+
+function setState(p){Object.assign(state,p);render();}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function uid(){return 'x'+Math.random().toString(36).slice(2);}
+function fmt(n){return n==null?'—':Number(n).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function pct(a,b){return b>0?Math.min(100,Math.round(a/b*100)):0;}
+function today(){return new Date().toISOString().slice(0,10);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function hi(s,q){if(!q)return esc(s);const i=s.toLowerCase().indexOf(q.toLowerCase());if(i<0)return esc(s);return esc(s.slice(0,i))+'<mark style="background:var(--accbg);color:var(--acc2);border-radius:2px">'+esc(s.slice(i,i+q.length))+'</mark>'+esc(s.slice(i+q.length));}
+
+function enrichPOs(){
+  const{db}=state;
+  const cMap=Object.fromEntries(db.clients.map(c=>[c.id,c.name]));
+  const sMap=Object.fromEntries(db.skus.map(s=>[s.id,s]));
+  const sorted=[...db.pos].sort((a,b)=>b.date.localeCompare(a.date));
+  return sorted.map(po=>{
+    const pskus=db.po_skus.filter(ps=>ps.po_id===po.id).map(ps=>({
+      ...ps,sku:sMap[ps.sku_id]||{code:'?',description:''},
+      revisions:db.revisions.filter(r=>r.po_sku_id===ps.id),
+      deliveries:db.deliveries.filter(d=>d.po_sku_id===ps.id),
+    }));
+    const invoices=db.sales_invoices.filter(si=>si.po_id===po.id).map(si=>({
+      ...si,drs:db.drs.filter(d=>d.si_id===si.id),
+    }));
+    const ord=pskus.reduce((a,s)=>a+s.ordered_qty,0);
+    const del=pskus.reduce((a,s)=>a+s.delivered_qty,0);
+    const val=pskus.reduce((a,s)=>a+s.ordered_qty*s.current_price,0);
+    const invoiced=invoices.reduce((a,si)=>a+si.amount,0);
+    // Payment status: all DRs paid = PAID, some = PARTIAL, none = UNPAID
+    const allDrs=invoices.flatMap(si=>si.drs);
+    const paidDrs=allDrs.filter(d=>d.payment_status==='PAID').length;
+    let payStatus=allDrs.length===0?'UNPAID':paidDrs===allDrs.length?'PAID':paidDrs>0?'PARTIAL_PAID':'UNPAID';
+    // Fulfillment status
+    let fulfillStatus=po.status==='CANCELLED'?'CANCELLED':
+      pskus.length===0?'OPEN':
+      pskus.every(s=>s.delivered_qty>=s.ordered_qty&&s.ordered_qty>0)?'FULFILLED':
+      pskus.some(s=>s.delivered_qty>0)?'PARTIAL':'OPEN';
+    // Combined PO status: CLOSED only when fulfilled AND fully paid
+    let poStatus=fulfillStatus==='CANCELLED'?'CANCELLED':
+      fulfillStatus==='FULFILLED'&&payStatus==='PAID'?'CLOSED':
+      fulfillStatus;
+    return{...po,pskus,invoices,clientName:cMap[po.client_id]||'—',ord,del,val,invoiced,payStatus,fulfillStatus,poStatus};
+  });
+}
+// Helper: get rating color for a client by id (used in PO list/detail)
+function clientRatingColor(clientId){
+  const r=clientRating(clientId);
+  return RATING_COLOR[r.rating]||'var(--t2)';
+}
+
+// Outstanding balance = sum of all unpaid DR amounts across open invoices
+function clientOutstandingBalance(clientId){
+  const epos=enrichPOs().filter(p=>p.client_id===clientId);
+  let total=0;
+  epos.forEach(po=>{
+    po.invoices.forEach(si=>{
+      si.drs.forEach(dr=>{
+        if(dr.payment_status!=='PAID'){
+          // apportion invoice amount equally across its DRs as best estimate
+          const drCount=si.drs.length||1;
+          total+=si.amount/drCount;
+        }
+      });
+      // If no DRs exist on the invoice, count full invoice amount as outstanding if UNPAID
+      if(si.drs.length===0&&si.payment_status!=='PAID'){
+        total+=si.amount;
+      }
+    });
+  });
+  return Math.round(total);
+}
+const CRITICAL_BALANCE=5000000;
+
+function statusBadge(s){
+  const map={FULFILLED:'b-grn',PARTIAL:'b-amb',CANCELLED:'b-red',OPEN:'b-gray',CLOSED:'b-tel'};
+  const lbl={FULFILLED:'● Fulfilled',PARTIAL:'◑ Partial',CANCELLED:'✕ Cancelled',OPEN:'○ Open',CLOSED:'✓ Closed'};
+  return`<span class="badge ${map[s]||'b-gray'}">${lbl[s]||s}</span>`;
+}
+function payBadge(s){
+  if(s==='PAID') return`<span class="badge b-grn"><span class="pay-dot paid-dot"></span>Paid</span>`;
+  if(s==='PARTIAL_PAID') return`<span class="badge b-amb"><span class="pay-dot partial-dot"></span>Partial</span>`;
+  return`<span class="badge b-red"><span class="pay-dot unpaid-dot"></span>Unpaid</span>`;
+}
+function vatBadge(v){return v==='VAT_INC'?`<span class="badge b-vatinc">VAT Inc</span>`:`<span class="badge b-vatex">VAT Ex</span>`;}
+
+// ── Client Rating ──────────────────────────────────────────────────────────
+// Returns {rating:'GREEN'|'ORANGE'|'RED'|'NONE', avgDays, closedPOs, totalPOs, detail}
+function clientRating(clientId){
+  const epos=enrichPOs().filter(p=>p.client_id===clientId);
+  if(epos.length===0) return{rating:'NONE',avgDays:null,closedPOs:0,totalPOs:0};
+  const totalPOs=epos.length;
+  const closedPOs=epos.filter(p=>p.poStatus==='CLOSED').length;
+  // For each CLOSED PO, find the latest DR payment_date among all its DRs
+  const daysList=[];
+  epos.forEach(po=>{
+    if(po.poStatus!=='CLOSED') return;
+    const allDrs=po.invoices.flatMap(si=>si.drs);
+    if(allDrs.length===0) return;
+    const paidDates=allDrs.map(dr=>dr.payment_date).filter(Boolean);
+    if(paidDates.length===0) return;
+    const latestPayDate=paidDates.sort().reverse()[0];
+    const poDate=new Date(po.date);
+    const payDate=new Date(latestPayDate);
+    const days=Math.round((payDate-poDate)/(1000*60*60*24));
+    if(days>=0) daysList.push(days);
+  });
+  // Any open/unpaid POs count as RED
+  const hasUnpaid=epos.some(p=>p.poStatus!=='CLOSED'&&p.poStatus!=='CANCELLED');
+  if(daysList.length===0&&hasUnpaid) return{rating:'RED',avgDays:null,closedPOs,totalPOs,label:'Unpaid / Pending'};
+  if(daysList.length===0) return{rating:'NONE',avgDays:null,closedPOs,totalPOs,label:'No closed POs yet'};
+  const avgDays=Math.round(daysList.reduce((a,b)=>a+b,0)/daysList.length);
+  // Rating based on avg days to full payment
+  let rating,label;
+  if(avgDays<=90){rating='GREEN';label='Avg '+avgDays+' days — Excellent';}
+  else if(avgDays<=200){rating='ORANGE';label='Avg '+avgDays+' days — Moderate';}
+  else{rating='RED';label='Avg '+avgDays+' days — Slow/Default';}
+  // If any PO is still unpaid, cap at ORANGE at best
+  if(hasUnpaid&&rating==='GREEN'){rating='ORANGE';label='Has open unpaid POs';}
+  return{rating,avgDays,closedPOs,totalPOs,label};
+}
+const RATING_COLOR={GREEN:'#3ecf8e',ORANGE:'#f5a623',RED:'#f5454a',NONE:'#9499c4'};
+const RATING_BG={GREEN:'rgba(62,207,142,.12)',ORANGE:'rgba(245,166,35,.12)',RED:'rgba(245,69,74,.12)',NONE:'rgba(148,153,196,.1)'};
+const RATING_LABEL={GREEN:'★ Green — Fast Payer',ORANGE:'◑ Orange — Moderate',RED:'▼ Red — Slow / Default',NONE:'— No data yet'};
+
+// ── Global Search ──────────────────────────────────────────────────────────
+function buildGsResults(q){
+  if(!q||q.trim().length<1)return[];
+  const lq=q.toLowerCase().trim();
+  const epos=enrichPOs();
+  const res=[];
+  epos.forEach(po=>{
+    if(po.po_number.toLowerCase().includes(lq))
+      res.push({type:'PO',badge:'gs-po',main:po.po_number,sub:po.clientName+' · '+po.date,poId:po.id});
+    if(po.clientName.toLowerCase().includes(lq))
+      res.push({type:'Customer',badge:'gs-cl',main:po.clientName,sub:po.po_number+' · '+po.date,poId:po.id,clientId:po.client_id});
+    if(po.date.includes(lq))
+      res.push({type:'PO Date',badge:'gs-po',main:po.po_number+' — '+po.date,sub:po.clientName,poId:po.id});
+    po.pskus.forEach(ps=>{
+      if(ps.sku.code.toLowerCase().includes(lq)||(ps.sku.description||'').toLowerCase().includes(lq)||String(ps.current_price).includes(lq))
+        res.push({type:'Design Mix',badge:'gs-sku',main:ps.sku.code+' ₱'+fmt(ps.current_price)+'/m³',sub:po.po_number+' · '+po.clientName,poId:po.id});
+    });
+    po.invoices.forEach(si=>{
+      if(si.si_number.toLowerCase().includes(lq))
+        res.push({type:'Invoice',badge:'gs-si',main:si.si_number,sub:po.po_number+' · ₱'+fmt(si.amount),poId:po.id,tab:'invoices'});
+      si.drs.forEach(dr=>{
+        if(dr.dr_number.toLowerCase().includes(lq)||dr.truck_plate.toLowerCase().includes(lq)||dr.driver_name.toLowerCase().includes(lq))
+          res.push({type:'DR#',badge:'gs-dr',main:dr.dr_number,sub:po.po_number+' · '+si.si_number+' · '+dr.truck_plate,poId:po.id,tab:'invoices',drId:dr.id});
+      });
+    });
+  });
+  const seen=new Set();
+  return res.filter(r=>{const k=r.poId+r.type+r.main;if(seen.has(k))return false;seen.add(k);return true;}).slice(0,12);
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function render(){
+  document.getElementById('app').innerHTML=buildApp();
+  bindEvents();
+}
+
+function buildApp(){
+  const epos=enrichPOs();
+  const stats={
+    total:epos.length,open:epos.filter(p=>p.poStatus==='OPEN').length,
+    partial:epos.filter(p=>p.poStatus==='PARTIAL').length,
+    fulfilled:epos.filter(p=>p.poStatus==='FULFILLED').length,
+    closed:epos.filter(p=>p.poStatus==='CLOSED').length,
+    cancelled:epos.filter(p=>p.poStatus==='CANCELLED').length,
+    totalOrd:epos.reduce((a,p)=>a+p.ord,0),totalDel:epos.reduce((a,p)=>a+p.del,0),
+  };
+  const gsRes=buildGsResults(state.gs);
+  const showDrop=state.gsOpen&&state.gs.trim().length>=1;
+  const dropHtml=showDrop?`<div id="gs-dropdown" class="open">
+    ${gsRes.length===0?`<div class="gs-empty">No results for "${esc(state.gs)}"</div>`:
+      gsRes.map((r,i)=>`<div class="gs-item" data-gsi="${i}"><span class="gs-badge ${r.badge}">${r.type}</span><div class="gs-body"><div class="gs-main">${hi(r.main,state.gs)}</div><div class="gs-sub">${esc(r.sub)}</div></div></div>`).join('')}
+  </div>`:(state.gsOpen?`<div id="gs-dropdown" class="open"><div class="gs-empty">Search customer · P.O. # · design mix · price · DR # · invoice…</div></div>`:'');
+
+  const navItems=[['dashboard','📊','Dashboard'],['pos','📋','P.O'],['skus','🧱','Design Mix'],['clients','👥','Clients']];
+  let body='';
+  if(state.view==='dashboard')body=buildDashboard(epos,stats);
+  else if(state.view==='pos')body=state.selectedPO?buildPODetail(epos):buildPOList(epos);
+  else if(state.view==='skus')body=buildSKUs();
+  else if(state.view==='clients')body=state.selectedClient?buildClientDetail():buildClients();
+
+  return`
+<div id="header">
+  <div id="logo"><span>PO</span> TRACKER</div>
+  <nav id="desktop-nav">
+    ${navItems.map(([v,ic,l])=>`<button class="nav-btn ${state.view===v?'active':''}" data-nav="${v}">${l}</button>`).join('')}
+  </nav>
+  <div id="header-right"></div>
+</div>
+<div id="search-wrap">
+  <div id="search-inner">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2.5" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);pointer-events:none;z-index:1"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input id="gs-input" placeholder="Search customer, P.O. #, design mix, DR…" value="${esc(state.gs)}" autocomplete="off" spellcheck="false"/>
+    <span id="gs-clear" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--t3);font-size:20px;cursor:pointer;line-height:1;${state.gs?'display:block':'display:none'}">×</span>
+    ${dropHtml}
+  </div>
+</div>
+<div class="demo-bar">Demo mode — data resets on refresh</div>
+<main>${body}</main>
+<nav id="bottom-nav">
+  ${navItems.map(([v,ic,l])=>`<button class="nav-btn ${state.view===v?'active':''}" data-nav="${v}"><span class="nav-icon">${ic}</span>${l}</button>`).join('')}
+</nav>
+${state.modal?buildModal():''}`;
+}
+
+// ── Dashboard ──────────────────────────────────────────────────────────────
+function buildDashboard(epos,stats){
+  const criticalCount=state.db.clients.filter(c=>clientOutstandingBalance(c.id)>=CRITICAL_BALANCE).length;
+  const criticalAlert=criticalCount>0?`<div style="background:rgba(245,69,74,.08);border:1px solid var(--red);border-radius:var(--r);padding:10px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="setState({view:'clients'})"><span style="font-size:18px">⚠</span><div style="flex:1"><span style="color:var(--red);font-weight:700">${criticalCount} client${criticalCount>1?'s':''} with outstanding balance ≥ ₱5,000,000</span><span style="color:var(--t3);font-size:12px;margin-left:8px">Click to view →</span></div></div>`:'';
+  return`
+<div class="page-title">Dashboard</div>
+${criticalAlert}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:10px;margin-bottom:24px">
+  ${[['Total POs',stats.total,'var(--t1)'],['Open',stats.open,'var(--t2)'],['Partial',stats.partial,'var(--amb)'],['Fulfilled',stats.fulfilled,'var(--grn)'],['Closed',stats.closed,'var(--tel)'],['Cancelled',stats.cancelled,'var(--red)']].map(([l,v,c])=>
+  `<div class="stat-card"><div class="stat-label">${l}</div><div style="font-size:22px;font-weight:700;color:${c}">${v}</div></div>`).join('')}
+</div>
+<div style="font-size:13px;font-weight:700;margin-bottom:10px">P.O. List (latest first)</div>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>PO #</th><th>Client</th><th>Date</th><th>VAT</th><th>Fulfillment</th><th>Payment</th><th>PO Status</th></tr></thead>
+  <tbody>
+    ${epos.length===0?`<tr><td colspan="7" class="empty">No POs yet</td></tr>`:''}
+    ${epos.slice(0,6).map(po=>`<tr class="row-link" data-goto-po="${po.id}">
+      <td style="color:var(--acc2);font-weight:500">${esc(po.po_number)}</td>
+      <td style="color:${clientRatingColor(po.client_id)};font-weight:500">${esc(po.clientName)}</td><td style="color:var(--t3)">${po.date}</td>
+      <td>${vatBadge(po.vat_type)}</td>
+      <td><div style="display:flex;align-items:center;gap:6px"><div class="prog" style="width:70px"><div class="prog-fill" style="width:${pct(po.del,po.ord)}%;background:${po.fulfillStatus==='FULFILLED'?'var(--grn)':'var(--acc)'}"></div></div><span style="font-size:11px;color:var(--t3)">${pct(po.del,po.ord)}%</span></div></td>
+      <td>${payBadge(po.payStatus)}</td>
+      <td>${statusBadge(po.poStatus)}</td>
+    </tr>`).join('')}
+  </tbody>
+</table></div>`;
+}
+
+// ── PO List ────────────────────────────────────────────────────────────────
+function poMatchesSearch(po, lq){
+  if(!lq) return true;
+  if(po.po_number.toLowerCase().includes(lq)) return true;
+  if(po.clientName.toLowerCase().includes(lq)) return true;
+  if(po.date.includes(lq)) return true;
+  if((po.notes||'').toLowerCase().includes(lq)) return true;
+  if(po.pskus.some(ps=>ps.sku.code.toLowerCase().includes(lq)||(ps.sku.description||'').toLowerCase().includes(lq)||(ps.notes||'').toLowerCase().includes(lq)||String(ps.current_price).includes(lq))) return true;
+  if(po.invoices.some(si=>si.si_number.toLowerCase().includes(lq)||(si.notes||'').toLowerCase().includes(lq)||
+    si.drs.some(dr=>dr.dr_number.toLowerCase().includes(lq)||(dr.truck_plate||'').toLowerCase().includes(lq)||(dr.driver_name||'').toLowerCase().includes(lq)||(dr.site_address||'').toLowerCase().includes(lq)||(dr.remarks||'').toLowerCase().includes(lq))
+  )) return true;
+  return false;
+}
+
+function buildPOList(epos){
+  const lq=(state.search||'').toLowerCase().trim();
+  const mf=state.filterStatus;
+  // Render all rows; JS will live-filter via the search input without re-render
+  const allRows=epos.map(po=>{
+    const matchSearch=poMatchesSearch(po,lq);
+    const matchFilter=mf==='ALL'||po.poStatus===mf;
+    const hidden=(!matchSearch||!matchFilter)?'style="display:none"':'';
+    return`<tr class="row-link po-row" data-goto-po="${po.id}" data-po-text="${esc((po.po_number+' '+po.clientName+' '+po.date+' '+(po.notes||'')+' '+po.pskus.map(ps=>ps.sku.code+' '+ps.sku.description+' '+ps.notes+' '+ps.current_price).join(' ')+' '+po.invoices.map(si=>si.si_number+' '+si.notes+' '+si.drs.map(d=>d.dr_number+' '+d.truck_plate+' '+d.driver_name+' '+d.remarks).join(' ')).join(' ')).toLowerCase())}" data-po-status="${po.poStatus}" ${hidden}>
+      <td style="color:var(--acc2);font-weight:500">${esc(po.po_number)}</td>
+      <td style="color:${clientRatingColor(po.client_id)};font-weight:500">${esc(po.clientName)}</td><td style="color:var(--t3)">${po.date}</td>
+      <td>${vatBadge(po.vat_type)}</td>
+      <td style="color:var(--t2)">${fmt(po.ord)}</td>
+      <td><div style="display:flex;align-items:center;gap:6px"><div class="prog"><div class="prog-fill" style="width:${pct(po.del,po.ord)}%;background:${po.fulfillStatus==='FULFILLED'?'var(--grn)':'var(--acc)'}"></div></div><span style="font-size:11px;color:var(--t3)">${fmt(po.del)}</span></div></td>
+      <td>${payBadge(po.payStatus)}</td>
+      <td>${statusBadge(po.poStatus)}</td>
+      <td style="color:var(--t3)">›</td>
+    </tr>`;
+  }).join('');
+
+  return`
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+  <div class="page-title" style="margin:0;flex:0 0 auto">P.O</div>
+  <button class="btn btn-sm btn-pri" id="btn-new-po" style="flex-shrink:0">+ New P.O</button>
+  <input id="po-search" value="${esc(state.search)}" placeholder="Search P.O. · client · SKU · price · invoice · DR # · date…" style="flex:1;min-width:200px;max-width:360px" autocomplete="off"/>
+  <select id="po-filter" style="width:140px">
+    ${['ALL','OPEN','PARTIAL','CLOSED','CANCELLED'].map(v=>`<option value="${v}" ${mf===v?'selected':''}>${v==='ALL'?'All Status':v==='OPEN'?'○ Open':v==='PARTIAL'?'◑ Partial':v==='CLOSED'?'✓ Closed':'✕ Cancelled'}</option>`).join('')}
+  </select>
+</div>
+<div class="tbl-wrap"><table id="po-table">
+  <thead><tr><th>PO #</th><th>Client</th><th>Date</th><th>VAT</th><th>Ordered m³</th><th>Delivered</th><th>Payment</th><th>PO Status</th><th></th></tr></thead>
+  <tbody id="po-tbody">${allRows}</tbody>
+</table></div>`;
+}
+
+// ── PO Detail ──────────────────────────────────────────────────────────────
+function buildPODetail(epos){
+  const po=epos.find(p=>p.id===state.selectedPO);
+  if(!po)return`<div class="empty">PO not found</div>`;
+  const tab=state.detailTab||'skus';
+  const vatNote=po.vat_type==='VAT_INC'
+    ?`<span class="vat-note vat-inc">✓ VAT Inclusive</span>`
+    :`<span class="vat-note vat-ex">⚠ VAT Exclusive</span>`;
+
+  // ── SKU TAB ──
+  const skuTab=`<div class="tbl-wrap"><table>
+    <thead><tr><th>SKU</th><th>Ordered m³</th><th>Delivered m³</th><th>Remaining</th><th>Progress</th><th>Base ₱/m³</th><th>Current ₱/m³</th><th>Rev.</th><th>Notes</th><th></th></tr></thead>
+    <tbody>
+      ${po.pskus.length===0?`<tr><td colspan="10" class="empty">No SKUs — click "+ Add SKU"</td></tr>`:''}
+      ${po.pskus.map(ps=>{
+        const remQ=ps.ordered_qty-ps.delivered_qty,p2=pct(ps.delivered_qty,ps.ordered_qty),hasRev=ps.revisions.length>0,isExp=state.expandedSku===ps.id;
+        const editingNote=state.editingSkuNote===ps.id;
+        const delHtml=ps.deliveries.length===0?'<div style="color:var(--t3);font-size:12px">No deliveries.</div>':ps.deliveries.map(d=>`<div class="del-row"><span style="color:var(--t2)">${d.date}</span><span style="color:var(--grn);font-weight:500">${fmt(d.qty)} m³</span><span style="color:var(--t3);flex:1;text-align:right">${esc(d.notes||'')}</span></div>`).join('');
+        const revHtml=ps.revisions.length===0?'<div style="color:var(--t3);font-size:12px">No revisions.</div>':ps.revisions.map(r=>`<div class="rev-row"><div style="display:flex;justify-content:space-between"><span style="color:var(--t3)">${r.date}</span><span><span style="color:var(--red)">₱${fmt(r.old_price)}</span> → <span style="color:var(--grn)">₱${fmt(r.new_price)}</span></span></div>${r.reason?`<div style="color:var(--t3);margin-top:2px">${esc(r.reason)}</div>`:''}</div>`).join('');
+        return`
+          <tr class="row-link" data-expand-sku="${ps.id}">
+            <td><div style="font-weight:500">${esc(ps.sku.code)}</div><div style="font-size:11px;color:var(--t3)">${esc(ps.sku.description||'')}</div></td>
+            <td>${fmt(ps.ordered_qty)}</td><td style="color:var(--grn)">${fmt(ps.delivered_qty)}</td>
+            <td style="color:${remQ>0?'var(--amb)':'var(--t3)'};">${fmt(remQ)}</td>
+            <td style="min-width:90px"><div style="display:flex;align-items:center;gap:5px"><div class="prog" style="flex:1"><div class="prog-fill" style="width:${p2}%;background:${p2>=100?'var(--grn)':'var(--acc)'}"></div></div><span style="font-size:11px;color:var(--t3)">${p2}%</span></div></td>
+            <td style="color:var(--t3)">₱${fmt(ps.base_price)}</td>
+            <td><span style="color:${hasRev?'var(--amb)':'var(--t1)'}">₱${fmt(ps.current_price)}</span>${hasRev?'<span class="tag-rev">rev</span>':''}</td>
+            <td><span class="badge b-gray">${ps.revisions.length}</span></td>
+            <td class="notes-cell" title="${esc(ps.notes||'')}">${ps.notes?esc(ps.notes):`<span style="color:var(--t3)">—</span>`}</td>
+            <td><button class="btn btn-sm sku-note-edit-btn" style="color:var(--t3);padding:2px 6px" data-edit-sku-note="${ps.id}">✎</button></td>
+          </tr>
+          ${editingNote?`<tr class="expand-row" id="sku-note-row-${ps.id}"><td colspan="10" style="padding:12px 14px">
+            <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Edit SKU Notes</div>
+            <div style="display:flex;gap:8px;align-items:flex-start">
+              <textarea id="sku-note-val" rows="3" style="flex:1;resize:vertical">${esc(ps.notes||'')}</textarea>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <button class="btn btn-sm btn-pri" id="sku-note-save" data-id="${ps.id}">Save</button>
+                <button class="btn btn-sm" id="sku-note-cancel">Cancel</button>
+              </div>
+            </div>
+          </td></tr>`:''}
+          ${isExp&&!editingNote?`<tr class="expand-row"><td colspan="10" style="padding:16px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+              <div><div class="sub-title">Delivery Log</div>${delHtml}</div>
+              <div><div class="sub-title">Price Revisions</div>${revHtml}</div>
+            </div>
+          </td></tr>`:''}`;
+      }).join('')}
+    </tbody>
+  </table>
+  <div style="padding:10px 12px;border-top:1px solid var(--b1)">
+    <button class="btn btn-sm" data-modal="add_sku_to_po" style="color:var(--acc2)">+ Add SKU</button>
+  </div></div>`;
+
+  // ── INVOICES TAB ──
+  const invoiceTab=`
+  <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+    <button class="btn btn-sm btn-pri" data-modal="add_invoice">+ Attach Invoice</button>
+  </div>
+  ${po.invoices.length===0?`<div class="tbl-wrap"><div class="empty">No invoices yet</div></div>`:''}
+  ${po.invoices.map(si=>{
+    const editSiNote=state.editingSiNote===si.id;
+    const allDrsPaid=si.drs.length>0&&si.drs.every(d=>d.payment_status==='PAID');
+    const anyDrPaid=si.drs.some(d=>d.payment_status==='PAID');
+    const siPayStatus=si.drs.length===0?si.payment_status:allDrsPaid?'PAID':anyDrPaid?'PARTIAL_PAID':'UNPAID';
+    return`<div class="card" style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:15px;font-weight:700;color:var(--tel)">${esc(si.si_number)}</span>
+            ${vatBadge(po.vat_type)} ${payBadge(siPayStatus)}
+          </div>
+          <div style="font-size:12px;color:var(--t3);margin-top:4px">${si.date} · <strong style="color:var(--t1)">₱${fmt(si.amount)}</strong></div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-sm" data-modal="edit_invoice" data-si-id="${si.id}">✎ Edit</button>
+          <button class="btn btn-sm btn-pri" data-modal="add_dr" data-si-id="${si.id}">+ DR #</button>
+        </div>
+      </div>
+      <!-- Invoice Notes -->
+      <div style="margin-bottom:12px">
+        <div class="sub-title">Invoice Notes</div>
+        ${editSiNote
+          ?`<div class="inline-edit"><textarea id="si-note-val" rows="2">${esc(si.notes||'')}</textarea><button class="btn btn-sm btn-pri" id="si-note-save" data-id="${si.id}">Save</button><button class="btn btn-sm" id="si-note-cancel">✕</button></div>`
+          :`<div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:12px;color:var(--t2);font-style:italic;flex:1">${si.notes?esc(si.notes):'<span style="color:var(--t3)">No notes</span>'}</span>
+              <button class="btn btn-sm" style="color:var(--t3)" data-edit-si-note="${si.id}">✎ Edit note</button>
+            </div>`}
+      </div>
+      <hr class="section-divider"/>
+      <!-- DR List -->
+      <div class="sub-title" style="margin-bottom:10px">Delivery Receipts (DR#)</div>
+      ${si.drs.length===0?`<div style="color:var(--t3);font-size:12px;padding:8px 0">No DR# attached yet</div>`:''}
+      ${si.drs.map(dr=>{
+        const drEditNote=state.editingDrNote===dr.id;
+        const viewingDR=state.viewDR===dr.id;
+        const skuObj=state.db.skus.find(s=>s.id===dr.sku_id)||{code:'?'};
+        const payClass=dr.payment_status==='PAID'?'pay-paid':dr.payment_status==='PARTIAL_PAID'?'pay-partial':'pay-unpaid';
+        const payLabel=dr.payment_status==='PAID'?'✓ Paid':dr.payment_status==='PARTIAL_PAID'?'◑ Partial':'○ Unpaid';
+        return`<div class="dr-card">
+          <div class="dr-header">
+            <div>
+              <span style="font-weight:700;color:var(--pur)">${esc(dr.dr_number)}</span>
+              <span style="color:var(--t3);font-size:11px;margin-left:8px">${dr.date}</span>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <button class="pay-pill ${payClass}" data-toggle-dr-pay="${dr.id}">${payLabel}</button>
+              <button class="btn btn-sm" data-modal="edit_dr" data-dr-id="${dr.id}">✎ Edit</button>
+              <button class="btn btn-sm" style="color:var(--acc2)" data-toggle-dr="${dr.id}">${viewingDR?'▲ Hide':'▼ Details'}</button>
+            </div>
+          </div>
+          ${viewingDR?`
+          <div class="dr-grid" style="margin-bottom:10px">
+            ${[['Truck Plate',dr.truck_plate],['Driver',dr.driver_name],['Site Address',dr.site_address],['Client',dr.client_name],['Design Mix',skuObj.code],['Volume Delivered',fmt(dr.volume)+' m³'],['Site Inspector',dr.site_inspector],['Payment Date',dr.payment_date||'—']].map(([l,v])=>`<div class="dr-field"><div class="dr-field-label">${l}</div><div class="dr-field-val">${esc(v||'—')}</div></div>`).join('')}
+          </div>
+          <div style="margin-bottom:8px">
+            <div class="sub-title">Remarks</div>
+            <div style="font-size:12px;color:var(--t2);background:var(--s3);padding:8px 10px;border-radius:6px;font-style:italic">${esc(dr.remarks||'—')}</div>
+          </div>
+          <div>
+            <div class="sub-title">DR Notes / Comments</div>
+            ${drEditNote
+              ?`<div class="inline-edit"><textarea id="dr-note-val" rows="2">${esc(dr.notes||'')}</textarea><button class="btn btn-sm btn-pri" id="dr-note-save" data-id="${dr.id}">Save</button><button class="btn btn-sm" id="dr-note-cancel">✕</button></div>`
+              :`<div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:12px;color:var(--t2);font-style:italic;flex:1">${dr.notes?esc(dr.notes):'<span style="color:var(--t3)">No notes</span>'}</span>
+                  <button class="btn btn-sm" style="color:var(--t3)" data-edit-dr-note="${dr.id}">✎ Edit note</button>
+                </div>`}
+          </div>`:''}
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('')}
+  ${po.invoices.length>0?`<div style="padding:14px 18px;background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+    <span style="color:var(--t3);font-size:12px">Total Invoiced</span>
+    <span style="font-size:16px;font-weight:700;color:var(--tel)">₱${fmt(po.invoiced)}</span>
+  </div>`:''}`;
+
+  return`
+<button class="btn btn-sm" id="btn-back" style="margin-bottom:14px">← Back</button>
+<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px">
+  <div>
+    <div style="font-size:20px;font-weight:800">${esc(po.po_number)}</div>
+    <div style="color:var(--t2);margin-top:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="color:${clientRatingColor(po.client_id)};font-weight:600">${esc(po.clientName)}</span><span style="color:var(--b2)">·</span>
+      <span style="color:var(--t3)">${po.date}</span><span style="color:var(--b2)">·</span>
+      ${vatNote}
+    </div>
+    ${po.notes?`<div style="color:var(--t3);font-size:12px;margin-top:5px;font-style:italic">${esc(po.notes)}</div>`:''}
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    ${statusBadge(po.poStatus)} ${payBadge(po.payStatus)}
+    <button class="btn btn-sm" data-modal="add_delivery">+ Log Delivery</button>
+    <button class="btn btn-sm" data-modal="revise_price">Revise Price</button>
+    <button class="btn btn-sm" data-modal="edit_po">Edit PO</button>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:22px;margin-top:16px">
+  ${[['Ordered',fmt(po.ord)+' m³','var(--t1)'],['Delivered',fmt(po.del)+' m³','var(--grn)'],['Remaining',fmt(po.ord-po.del)+' m³','var(--amb)'],['PO Value','₱'+fmt(po.val),'var(--acc2)'],['Invoiced','₱'+fmt(po.invoiced),'var(--tel)'],['Completion',pct(po.del,po.ord)+'%',pct(po.del,po.ord)>=100?'var(--grn)':'var(--t2)']].map(([l,v,c])=>`<div class="stat-card"><div class="stat-label">${l}</div><div style="font-size:16px;font-weight:700;color:${c}">${v}</div></div>`).join('')}
+</div>
+<div class="detail-tabs">
+  <button class="detail-tab ${tab==='skus'?'active':''}" data-detail-tab="skus">SKUs / Design Mixes</button>
+  <button class="detail-tab ${tab==='invoices'?'active':''}" data-detail-tab="invoices">Sales Invoices & DR#${po.invoices.length>0?` <span class="badge b-tel" style="margin-left:4px;font-size:10px">${po.invoices.length}</span>`:''}</button>
+</div>
+${tab==='skus'?skuTab:invoiceTab}`;
+}
+
+// ── Design Mix Database / Clients ───────────────────────────────────────────────────
+function buildSKUs(){
+  return`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px"><div class="page-title" style="margin:0">Design Mix</div><button class="btn btn-sm btn-pri" data-modal="add_sku">+ Add Design Mix</button></div>
+  <div class="tbl-wrap"><table><thead><tr><th>Code</th><th>Description</th><th>Unit</th></tr></thead><tbody>
+    ${state.db.skus.length===0?`<tr><td colspan="3" class="empty">No SKUs</td></tr>`:''}
+    ${state.db.skus.map(s=>`<tr><td style="color:var(--acc2);font-weight:500">${esc(s.code)}</td><td style="color:var(--t2)">${esc(s.description||'—')}</td><td><span class="badge b-gray">${s.unit}</span></td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+function buildClients(){
+  const epos=enrichPOs();
+  const criticalClients=state.db.clients.filter(c=>clientOutstandingBalance(c.id)>=CRITICAL_BALANCE);
+  const criticalBanner=criticalClients.length>0?`
+    <div style="background:rgba(245,69,74,.08);border:2px solid var(--red);border-radius:var(--rl);padding:14px 18px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="font-size:22px">⚠</span>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:var(--red)">${criticalClients.length} Client${criticalClients.length>1?'s':''} with Outstanding Balance ≥ ₱5,000,000 — Urgent Collection Required</div>
+          <div style="font-size:11px;color:var(--t3);margin-top:2px">These accounts exceed the critical threshold. Prioritize immediately.</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${criticalClients.map(c=>{const bal=clientOutstandingBalance(c.id);return`<div style="background:var(--redbg);border:1px solid var(--red)55;border-radius:8px;padding:8px 14px;display:flex;align-items:center;gap:10px"><span style="color:var(--red);font-weight:700">${esc(c.name)}</span><span style="color:var(--red);font-size:13px;font-weight:700">₱${(bal/1e6).toFixed(2)}M</span></div>`;}).join('')}
+      </div>
+    </div>`:'';
+  return`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div class="page-title" style="margin:0">Clients</div>
+    <button class="btn btn-sm btn-pri" data-modal="add_client">+ Add Client</button>
+  </div>
+  <div style="margin-bottom:16px">
+    <input id="client-search" placeholder="🔍  Search client name…" autocomplete="off" style="max-width:360px"/>
+  </div>
+  ${criticalBanner}
+  <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+    ${[['GREEN','★ Green','Fast — paid within 90 days','#3ecf8e','rgba(62,207,142,.1)'],
+       ['ORANGE','◑ Orange','Moderate — 91–200 days','#f5a623','rgba(245,166,35,.1)'],
+       ['RED','▼ Red','Slow / unpaid / defaulted','#f5454a','rgba(245,69,74,.1)']].map(([r,l,d,c,bg])=>{
+      const count=state.db.clients.filter(cl=>clientRating(cl.id).rating===r).length;
+      return`<div style="background:${bg};border:1px solid ${c}33;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px"><span style="color:${c};font-weight:700;font-size:20px">${count}</span><div><div style="color:${c};font-weight:600;font-size:12px">${l}</div><div style="color:var(--t3);font-size:11px">${d}</div></div></div>`;}).join('')}
+  </div>
+  <div id="client-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px">
+    ${state.db.clients.length===0?'<div style="color:var(--t3);padding:20px">No clients yet</div>':''}
+    ${state.db.clients.map(c=>{
+      const cpos=epos.filter(p=>p.client_id===c.id);
+      const ini=c.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+      const r=clientRating(c.id);
+      const rColor=RATING_COLOR[r.rating];
+      const rBg=RATING_BG[r.rating];
+      const activePOs=cpos.filter(p=>p.poStatus==='OPEN'||p.poStatus==='PARTIAL').length;
+      const totalVal=cpos.reduce((a,p)=>a+p.val,0);
+      const outstanding=clientOutstandingBalance(c.id);
+      const isCritical=outstanding>=CRITICAL_BALANCE;
+      return`<div class="card client-card" data-goto-client="${c.id}" data-client-name="${esc(c.name.toLowerCase())}" style="border:${isCritical?'2px solid var(--red)':'1px solid '+rColor+'33'}">
+        ${isCritical?`<div style="background:var(--redbg);border-radius:6px;padding:5px 10px;margin-bottom:10px;font-size:12px;font-weight:700;color:var(--red)">⚠ CRITICAL — Outstanding ≥ ₱5M</div>`:''}
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:44px;height:44px;border-radius:50%;background:${rBg};border:2px solid ${rColor}55;display:flex;align-items:center;justify-content:center;color:${rColor};font-weight:800;font-size:15px;flex-shrink:0">${esc(ini)}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:15px;color:${rColor};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.name)}</div>
+            <div style="font-size:12px;color:var(--t3);margin-top:2px">${cpos.length} PO${cpos.length!==1?'s':''} · ${activePOs} active · Tap to view</div>
+          </div>
+          <span style="color:var(--t3);font-size:20px">›</span>
+        </div>
+        <div style="background:${rBg};border-radius:8px;padding:8px 12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Payment Rating</div><div style="font-size:13px;font-weight:600;color:${rColor}">${RATING_LABEL[r.rating]}</div></div>
+          ${r.avgDays!=null?`<div style="text-align:right"><div style="font-size:11px;color:var(--t3)">Avg days</div><div style="font-size:20px;font-weight:700;color:${rColor}">${r.avgDays}</div></div>`:''}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div style="text-align:center;background:var(--s2);border-radius:6px;padding:8px 4px"><div style="font-size:20px;font-weight:700;color:var(--t1)">${cpos.length}</div><div style="font-size:10px;color:var(--t3)">Total POs</div></div>
+          <div style="text-align:center;background:var(--s2);border-radius:6px;padding:8px 4px"><div style="font-size:20px;font-weight:700;color:var(--tel)">${r.closedPOs}</div><div style="font-size:10px;color:var(--t3)">Closed</div></div>
+          <div style="text-align:center;background:${isCritical?'var(--redbg)':'var(--s2)'};border-radius:6px;padding:8px 4px">
+            <div style="font-size:14px;font-weight:700;color:${isCritical?'var(--red)':outstanding>0?'var(--amb)':'var(--grn)'}">
+              ${outstanding===0?'✓ Paid':outstanding>=1e6?'₱'+(outstanding/1e6).toFixed(1)+'M':'₱'+(outstanding/1e3).toFixed(0)+'K'}
+            </div>
+            <div style="font-size:10px;color:var(--t3)">Outstanding</div>
+          </div>
+        </div>
+      </div>`;}).join('')}
+  </div>`;
+}
+
+// ── Client Detail ──────────────────────────────────────────────────────────
+function buildClientDetail(){
+  const c=state.db.clients.find(cl=>cl.id===state.selectedClient);
+  if(!c)return`<div class="empty">Client not found</div>`;
+  const epos=enrichPOs().filter(p=>p.client_id===c.id);
+  const r=clientRating(c.id);
+  const rColor=RATING_COLOR[r.rating];
+  const rBg=RATING_BG[r.rating];
+  const outstanding=clientOutstandingBalance(c.id);
+  const isCritical=outstanding>=CRITICAL_BALANCE;
+  const ini=c.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+  const totalVal=epos.reduce((a,p)=>a+p.val,0);
+
+  return`
+<button class="btn btn-sm" id="btn-back-client" style="margin-bottom:14px">← All Clients</button>
+<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap">
+  <div style="width:56px;height:56px;border-radius:50%;background:${rBg};border:3px solid ${rColor}55;display:flex;align-items:center;justify-content:center;color:${rColor};font-weight:800;font-size:18px;flex-shrink:0">${esc(ini)}</div>
+  <div style="flex:1;min-width:0">
+    <div style="font-size:22px;font-weight:800;color:${rColor}">${esc(c.name)}</div>
+    <div style="font-size:13px;color:var(--t3);margin-top:3px">${epos.length} Purchase Order${epos.length!==1?'s':''} · ${RATING_LABEL[r.rating]}</div>
+  </div>
+</div>
+
+<!-- Summary row -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px">
+  <div class="stat-card"><div class="stat-label">Total POs</div><div style="font-size:22px;font-weight:700">${epos.length}</div></div>
+  <div class="stat-card"><div class="stat-label">Closed</div><div style="font-size:22px;font-weight:700;color:var(--tel)">${r.closedPOs}</div></div>
+  <div class="stat-card"><div class="stat-label">PO Value</div><div style="font-size:18px;font-weight:700;color:var(--acc2)">₱${totalVal>=1e6?(totalVal/1e6).toFixed(1)+'M':fmt(totalVal)}</div></div>
+  <div class="stat-card" style="background:${isCritical?'var(--redbg)':'var(--s2)'};border-color:${isCritical?'rgba(245,69,74,.4)':'var(--b1)'}">
+    <div class="stat-label" style="color:${isCritical?'var(--red)':'var(--t3)'}">Outstanding${isCritical?' ⚠':''}</div>
+    <div style="font-size:18px;font-weight:700;color:${isCritical?'var(--red)':outstanding>0?'var(--amb)':'var(--grn)'}">
+      ${outstanding===0?'₱0 ✓':'₱'+(outstanding>=1e6?(outstanding/1e6).toFixed(2)+'M':fmt(outstanding))}
+    </div>
+  </div>
+  <div class="stat-card" style="background:${rBg}">
+    <div class="stat-label">Avg. Pay Days</div>
+    <div style="font-size:22px;font-weight:700;color:${rColor}">${r.avgDays!=null?r.avgDays+'d':'—'}</div>
+  </div>
+</div>
+
+<!-- POs for this client -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+  <div style="font-size:16px;font-weight:700">Purchase Orders</div>
+  <button class="btn btn-pri btn-sm" id="btn-new-po-for-client">+ New P.O for ${esc(c.name.split(' ')[0])}</button>
+</div>
+${epos.length===0?`<div class="empty">No purchase orders yet for this client.</div>`:`
+<div class="tbl-wrap"><table>
+  <thead><tr><th>P.O. #</th><th>Date</th><th>VAT</th><th>Ordered m³</th><th>Delivered</th><th>Payment</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+    ${epos.map(po=>`<tr class="row-link" data-goto-po="${po.id}">
+      <td style="color:var(--acc2);font-weight:600">${esc(po.po_number)}</td>
+      <td style="color:var(--t3)">${po.date}</td>
+      <td>${vatBadge(po.vat_type)}</td>
+      <td>${fmt(po.ord)}</td>
+      <td><div style="display:flex;align-items:center;gap:6px"><div class="prog" style="width:60px"><div class="prog-fill" style="width:${pct(po.del,po.ord)}%;background:${po.poStatus==='CLOSED'?'var(--grn)':'var(--acc)'}"></div></div><span style="font-size:12px;color:var(--t3)">${fmt(po.del)}</span></div></td>
+      <td>${payBadge(po.payStatus)}</td>
+      <td>${statusBadge(po.poStatus)}</td>
+      <td style="color:var(--t3)">›</td>
+    </tr>`).join('')}
+  </tbody>
+</table></div>`}`;
+}
+
+// ── Modal Builder ──────────────────────────────────────────────────────────
+function buildModal(){
+  const{modal,db}=state;
+  const t=modal.type,po=modal.po;
+  let content='',title='';
+
+  if(t==='new_po'){
+    title='New Purchase Order';
+    content=`
+      <div class="form-group"><label>PO Number</label><input id="f-pono" placeholder="PO-2024-001" value="${esc(modal.pono||'')}"/></div>
+      <div class="form-row-2">
+        <div class="form-group" style="margin:0"><label>Client</label><select id="f-client"><option value="">Select…</option>${db.clients.map(c=>`<option value="${c.id}" ${modal.client===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
+        <div class="form-group" style="margin:0"><label>Date</label><input type="date" id="f-date" value="${modal.date||today()}"/></div>
+      </div>
+      <div class="form-group"><label>VAT Type</label><select id="f-vat"><option value="VAT_INC" ${(!modal.vat||modal.vat==='VAT_INC')?'selected':''}>VAT Inclusive</option><option value="VAT_EX" ${modal.vat==='VAT_EX'?'selected':''}>VAT Exclusive</option></select></div>
+      <div class="form-group"><label>Project Name &amp; Address</label><input id="f-notes" placeholder="e.g. Tower A — BGC, Taguig City" value="${esc(modal.notes||'')}"/></div>
+      ${modal.err?`<div class="err">${modal.err}</div>`:''}
+      <div class="modal-footer"><button class="btn btn-sm" data-close>Cancel</button><button class="btn btn-sm btn-pri" id="m-save-po">Create PO</button></div>`;
+  }
+  else if(t==='edit_po'){
+    title='Edit P.O — '+esc(po?.po_number||'');
+    content=`
+      <div class="sheet-handle"></div>
+      <div class="form-group"><label>P.O. Number</label><input id="f-edit-pono" value="${esc(po.po_number||'')}"/></div>
+      <div class="form-row-2">
+        <div class="form-group" style="margin:0"><label>Date</label><input type="date" id="f-edit-date" value="${po.date||today()}"/></div>
+        <div class="form-group" style="margin:0"><label>VAT Type</label>
+          <select id="f-editvat">
+            <option value="VAT_INC" ${po.vat_type==='VAT_INC'?'selected':''}>VAT Inclusive</option>
+            <option value="VAT_EX" ${po.vat_type==='VAT_EX'?'selected':''}>VAT Exclusive</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>Status</label>
+        <select id="f-postatus">
+          <option value="OPEN" ${po.poStatus==='OPEN'?'selected':''}>○ Open</option>
+          <option value="PARTIAL" ${po.poStatus==='PARTIAL'?'selected':''}>◑ Partial Delivery</option>
+          <option value="CLOSED" ${po.poStatus==='CLOSED'?'selected':''}>✓ Closed (Paid)</option>
+          <option value="CANCELLED" ${po.poStatus==='CANCELLED'?'selected':''}>✕ Cancelled</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Project Name &amp; Address</label><input id="f-ponotes" value="${esc(po.notes||'')}"/></div>
+      ${modal.err?`<div class="err">${modal.err}</div>`:''}
+      ${modal.confirmDelete?`
+        <div class="confirm-box">
+          <p>⚠ Delete <strong>${esc(po.po_number)}</strong>? This will also remove all its design mixes, invoices and DRs. This cannot be undone.</p>
+          <div class="btn-row">
+            <button class="btn" id="cancel-delete">Keep it</button>
+            <button class="btn btn-danger" id="confirm-delete-po" data-poid="${po.id}">Yes, Delete P.O.</button>
+          </div>
+        </div>`:
+        `<div style="padding-top:8px;border-top:1px solid var(--b1);margin-top:8px">
+          <button class="btn btn-danger btn-sm" id="show-delete-po">🗑 Delete this P.O.</button>
+        </div>`}
+      <div class="modal-footer">
+        <button class="btn" data-close>Cancel</button>
+        <button class="btn btn-pri" id="m-save-editpo">Save Changes</button>
+      </div>`;
+  }
+  else if(t==='add_sku_to_po'){
+    title='Add SKU — '+esc(po?.po_number||'');
+    const skuOptions=db.skus.map(s=>`<div class="sku-opt" data-sku-id="${s.id}" data-sku-label="${esc(s.code+' – '+(s.description||''))}" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--b1);font-size:13px" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''"><strong style="color:var(--acc2)">${esc(s.code)}</strong>${s.description?` <span style="color:var(--t3)">– ${esc(s.description)}</span>`:''}</div>`).join('');
+    content=`
+      <div class="form-group">
+        <label>SKU / Design Mix <span style="color:var(--red)">*</span></label>
+        <div style="position:relative">
+          <input id="f-sku-search" placeholder="Type to search or select design mix…" value="${modal.skuLabel||''}" autocomplete="off" style="padding-right:32px"/>
+          <span id="f-sku-clear" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--t3);cursor:pointer;font-size:16px;${modal.skuLabel?'display:block':'display:none'}">×</span>
+          <input type="hidden" id="f-sku" value="${modal.sku||''}"/>
+          <div id="sku-opts" style="position:absolute;top:100%;left:0;right:0;background:var(--s2);border:1px solid var(--b2);border-radius:var(--r);max-height:200px;overflow-y:auto;z-index:50;display:none;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,.5)">
+            ${skuOptions}
+          </div>
+        </div>
+        ${modal.sku?`<div class="hint">Selected: <span style="color:var(--acc2)">${esc(modal.skuLabel||modal.sku)}</span></div>`:'<div class="hint" style="color:var(--t3)">Start typing to filter, or scroll the list</div>'}
+      </div>
+      <div class="form-row-2">
+        <div class="form-group" style="margin:0"><label>Ordered Qty (m³) <span style="color:var(--red)">*</span></label><input type="number" id="f-qty" placeholder="100" value="${modal.qty||''}"/></div>
+        <div class="form-group" style="margin:0"><label>Base Price (₱/m³) <span style="color:var(--red)">*</span></label><input type="number" id="f-price" placeholder="4800" value="${modal.price||''}"/></div>
+      </div>
+      <div class="form-group"><label>Notes</label><input id="f-skunotes" placeholder="Slump, admixture…" value="${esc(modal.skunotes||'')}"/></div>
+      ${modal.err?`<div class="err">${modal.err}</div>`:''}
+      <div class="modal-footer"><button class="btn btn-sm" data-close>Cancel</button><button class="btn btn-sm btn-pri" id="m-save-posku">Add SKU</button></div>`;
+  }
+  else if(t==='add_delivery'){
+    title='Log Delivery — '+esc(po?.po_number||'');
+    const pskus=db.po_skus.filter(ps=>ps.po_id===po.id);
+    const selId=modal.posku||pskus[0]?.id,selPs=pskus.find(p=>p.id===selId);
+    const rem=selPs?selPs.ordered_qty-selPs.delivered_qty:0;
+    const skuMap=Object.fromEntries(db.skus.map(s=>[s.id,s]));
+    content=`
+      <div class="form-group"><label>SKU</label><select id="f-posku">${pskus.map(ps=>`<option value="${ps.id}" ${selId===ps.id?'selected':''}>${esc((skuMap[ps.sku_id]||{}).code||'?')} — Rem: ${fmt(ps.ordered_qty-ps.delivered_qty)} m³</option>`).join('')}</select><div class="hint">Remaining: <span style="color:var(--amb)">${fmt(rem)} m³</span></div></div>
+      <div class="form-row-2">
+        <div class="form-group" style="margin:0"><label>Qty (m³)</label><input type="number" id="f-delqty" placeholder="0.00" value="${modal.qty||''}"/></div>
+        <div class="form-group" style="margin:0"><label>Date</label><input type="date" id="f-deldate" value="${modal.date||today()}"/></div>
+      </div>
+      <div class="form-group"><label>Notes</label><input id="f-delnotes" placeholder="e.g. DR# …" value="${esc(modal.notes||'')}"/></div>
+      ${modal.err?`<div class="err">${modal.err}</div>`:''}
+      <div class="modal-footer"><button class="btn btn-sm" data-close>Cancel</button><button class="btn btn-sm btn-pri" id="m-save-del">Log</button></div>`;
+  }
+  else if(t==='revise_price'){
+    title='Revise Price — '+esc(po?.po_number||'');
+    const pskus=db.po_skus.filter(ps=>ps.po_id===po.id);
+    const skuMap=Object.fromEntries(db.skus.map(s=>[s.id,s]));
+    const selId=modal.posku||pskus[0]?.id,selPs=pskus.find(p=>p.id===selId);
+    content=`
+      <div class="form-group"><label>SKU</label><select id="f-revsku">${pskus.map(ps=>`<option value="${ps.id}" ${selId===ps.id?'selected':''}>${esc((skuMap[ps.sku_id]||{}).code||'?')} — ₱${fmt(ps.current_price)}/m³</option>`).join('')}</select>${selPs?`<div class="hint">Current: <span style="color:var(--amb)">₱${fmt(selPs.current_price)}</span> · Base: ₱${fmt(selPs.base_price)}</div>`:''}</div>
+      <div class="form-group"><label>New Price (₱/m³)</label><input type="number" id="f-newprice" placeholder="5100" value="${modal.price||''}"/></div>
+      <div class="form-group"><label>Reason</label><input id="f-revreason" placeholder="Cement price increase…" value="${esc(modal.reason||'')}"/></div>
+      ${modal.err?`<div class="err">${modal.err}</div>`:''}
+      <div class="modal-footer"><button class="btn btn-sm" data-close>Cancel</button><button class="btn btn-sm btn-pri" id="m-save-rev">Save</button></div>`;
+  }
+  else if(t==='add_invoice'||t==='edit_invoice'){
+    const si=t==='edit_invoice'?db.sales_invoices.find(s=>s.id===modal.siId):null;
+    title=(t==='add_invoice'?'Attach Invoice':'Edit Invoice')+' — '+esc(po?.po_number||'');
+    content=`
+      <div class="form-group"><label>SI Number</label><input id="f-sinum" placeholder="SI-2024-0001" value="${esc(modal.sinum||(si?.si_number)||'')}"/></div>
+      <div class="form-row-2">
+        <div class="form-group" style="margin:0"><label>Date</label><input type="date" id="f-sidate" value="${modal.sidate||(si?.date)||today()}"/></div>
+        <div class="form-group" style="margin:0"><label>Amount (₱)</label><input type="number" id="f-siamt" placeholder="0.00" value="${modal.siamt||(si?.amount)||''}"/></div>
+      </div>
+      <div class="form-group"><label>Payment Status</label><select id="f-sipay"><option value="UNPAID" ${(modal.sipay||(si?.payment_status)||'UNPAID')==='UNPAID'?'selected':''}>Unpaid</option><option value="PARTIAL_PAID" ${(modal.sipay||(si?.payment_status))==='PARTIAL_PAID'?'selected':''}>Partial Paid</option><option value="PAID" ${(modal.sipay||(si?.payment_status))==='PAID'?'selected':''}>Paid</option></select></div>
+      <div class="form-group"><label>Notes</label><textarea id="f-sinotes" rows="2">${esc(modal.sinotes||(si?.notes)||'')}</textarea></div>
+      ${modal.err?`<div class="err">${modal.err}</div>`:''}
+      <div class="modal-footer"><button class="btn btn-sm" data-close>Cancel</button><button class="btn btn-sm btn-pri" id="m-save-si">${t==='edit_invoice'?'Save Changes':'Attach'}</button></div>`;
+  }
+  else if(t==='add_dr'||t==='edit_dr'){
+    const dr=t==='edit_dr'?db.drs.find(d=>d.id===modal.drId):null;
+    const siId=dr?.si_id||modal.siId;
+    const si=db.sales_invoices.find(s=>s.id===siId);
+    title=(t==='add_dr'?'Add DR #':'Edit DR #')+(si?' — '+esc(si.si_number):'');
+    content=`
+      <div class="form-row-2">
+        <div class="form-group" style="margin:0"><label>DR Number <span style="color:var(--red)">*</span></label><input id="f-drnum" placeholder="DR-2024-0001" value="${esc(modal.drnum||(dr?.dr_number)||'')}"/></div>
+        <div class="form-group" style="margin:0"><label>Date <span style="color:var(--red)">*</span></label><input type="date" id="f-drdate" value="${modal.drdate||(dr?.date)||today()}"/></div>
+      </div>
+      <div class="form-group">
+        <label>Design Mix <span style="color:var(--red)">*</span></label>
+        <div style="position:relative">
+          <input id="f-drsku-search" placeholder="Type to search design mix (e.g. 3000PSI)…" value="${modal.drskuLabel||(dr?.sku_id?((db.skus.find(s=>s.id===dr.sku_id)||{}).code+' – '+((db.skus.find(s=>s.id===dr.sku_id)||{}).description||'')):'')||''}" autocomplete="off" style="padding-right:32px"/>
+          <span id="f-drsku-clear" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--t3);cursor:pointer;font-size:16px;${(modal.drskuLabel||(dr?.sku_id))?'display:block':'display:none'}">×</span>
+          <input type="hidden" id="f-drsku" value="${modal.drsku||(dr?.sku_id)||''}"/>
+          <div id="drsku-opts" style="position:absolute;top:100%;left:0;right:0;background:var(--s2);border:1px solid var(--b2);border-radius:var(--r);max-height:180px;overflow-y:auto;z-index:50;display:none;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,.5)">
+            ${db.skus.map(s=>`<div class="drsku-opt" data-drsku-id="${s.id}" data-drsku-label="${esc(s.code+' – '+(s.description||''))}" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--b1);font-size:13px" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''"><strong style="color:var(--acc2)">${esc(s.code)}</strong>${s.description?` <span style="color:var(--t3)">– ${esc(s.description)}</span>`:''}</div>`).join('')}
+          </div>
+        </div>
+        <div class="hint" style="color:var(--t3)">Start typing or click to browse the Design Mix list</div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-group" style="margin:0">
+          <label>Volume Delivered (m³) <span style="color:var(--red)">*</span></label>
+          <input type="number" id="f-drvol" placeholder="0" value="${modal.drvol||(dr?.volume)||''}" style="max-width:120px"/>
+        </div>
+        <div></div>
+      </div>
+      <hr style="border:none;border-top:1px solid var(--b1);margin:4px 0 12px"/>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Optional Details</div>
+      <div class="form-row-2">
+        <div class="form-group" style="margin:0"><label>Truck Plate #</label><input id="f-plate" placeholder="ABC 1234" value="${esc(modal.plate||(dr?.truck_plate)||'')}"/></div>
+        <div class="form-group" style="margin:0"><label>Driver Name</label><input id="f-driver" placeholder="Juan Dela Cruz" value="${esc(modal.driver||(dr?.driver_name)||'')}"/></div>
+      </div>
+      <div class="form-group"><label>Site Address</label><input id="f-site" placeholder="Tower A, BGC Taguig" value="${esc(modal.site||(dr?.site_address)||'')}"/></div>
+      <div class="form-row-2">
+        <div class="form-group" style="margin:0"><label>Client Name</label><input id="f-drclient" placeholder="Client" value="${esc(modal.drclient||(dr?.client_name)||'')}"/></div>
+        <div class="form-group" style="margin:0"><label>Site Inspector</label><input id="f-inspector" placeholder="Engr. Santos" value="${esc(modal.inspector||(dr?.site_inspector)||'')}"/></div>
+      </div>
+      <div class="form-group"><label>Remarks</label><input id="f-drremarks" placeholder="e.g. Poured column footings" value="${esc(modal.drremarks||(dr?.remarks)||'')}"/></div>
+      <div class="form-row-2">
+        <div class="form-group" style="margin:0"><label>Payment Status</label><select id="f-drpay"><option value="UNPAID" ${(modal.drpay||(dr?.payment_status)||'UNPAID')==='UNPAID'?'selected':''}>Unpaid</option><option value="PARTIAL_PAID" ${(modal.drpay||(dr?.payment_status))==='PARTIAL_PAID'?'selected':''}>Partial Paid</option><option value="PAID" ${(modal.drpay||(dr?.payment_status))==='PAID'?'selected':''}>Paid</option></select></div>
+        <div class="form-group" style="margin:0"><label>Payment Date</label><input type="date" id="f-drpaydate" value="${modal.drpaydate||(dr?.payment_date)||''}"/></div>
+      </div>
+      <div class="form-group"><label>Notes / Comments</label><textarea id="f-drnotes" rows="2">${esc(modal.drnotes||(dr?.notes)||'')}</textarea></div>
+      ${modal.err?`<div class="err">${modal.err}</div>`:''}
+      <div class="modal-footer"><button class="btn btn-sm" data-close>Cancel</button><button class="btn btn-sm btn-pri" id="m-save-dr">${t==='edit_dr'?'Save Changes':'Add DR #'}</button></div>`;
+  }
+  else if(t==='add_sku'){
+    title='Add Design Mix';
+    content=`
+      <div class="form-row-2"><div class="form-group" style="margin:0"><label>Code</label><input id="f-skucode" placeholder="3000PSI" value="${esc(modal.code||'')}"/></div><div class="form-group" style="margin:0"><label>Unit</label><select id="f-skuunit"><option value="m3">m³</option></select></div></div>
+      <div class="form-group"><label>Description</label><input id="f-skudesc" placeholder="Regular 3000 PSI Mix" value="${esc(modal.desc||'')}"/></div>
+      ${modal.err?`<div class="err">${modal.err}</div>`:''}
+      <div class="modal-footer"><button class="btn btn-sm" data-close>Cancel</button><button class="btn btn-sm btn-pri" id="m-save-sku">Add</button></div>`;
+  }
+  else if(t==='add_client'){
+    title='Add Client';
+    content=`<div class="form-group"><label>Name</label><input id="f-cname" placeholder="Primeland Developers Inc." value="${esc(modal.name||'')}"/></div>${modal.err?`<div class="err">${modal.err}</div>`:''}<div class="modal-footer"><button class="btn btn-sm" data-close>Cancel</button><button class="btn btn-sm btn-pri" id="m-save-client">Add</button></div>`;
+  }
+
+  return`<div class="overlay" id="overlay"><div class="modal ${t==='add_dr'||t==='edit_dr'?'modal-lg':''}"><div class="modal-title">${title}<button data-close style="font-size:20px;color:var(--t3);line-height:1">×</button></div>${content}</div></div>`;
+}
+
+// ── Events ─────────────────────────────────────────────────────────────────
+function bindEvents(){
+  const db=state.db;
+  // nav
+  document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>setState({view:b.dataset.nav,selectedPO:null,selectedClient:null,expandedSku:null,detailTab:'skus',gsOpen:false})));
+  // New PO button lives inside the PO list — use event delegation
+  document.addEventListener('click',e=>{
+    if(e.target&&e.target.id==='btn-new-po')setState({modal:{type:'new_po'}});
+    if(e.target&&e.target.id==='btn-new-po-for-client'){
+      // Pre-select client in new PO modal
+      setState({modal:{type:'new_po',client:state.selectedClient}});
+    }
+  },{capture:false});
+
+  // Global search
+  const gsi=document.getElementById('gs-input'),gsc=document.getElementById('gs-clear');
+  if(gsi){
+    gsi.addEventListener('input',e=>{
+      state.gs=e.target.value;state.gsOpen=true;
+      if(gsc)gsc.style.display=e.target.value?'block':'none';
+      const drop=document.getElementById('gs-dropdown');
+      const res=buildGsResults(state.gs);
+      let html=state.gs.trim().length===0?`<div class="gs-empty">Search customer · P.O. # · design mix · price · DR # · date…</div>`:
+        res.length===0?`<div class="gs-empty">No results for "${esc(state.gs)}"</div>`:
+        res.map((r,i)=>`<div class="gs-item" data-gsi="${i}"><span class="gs-badge ${r.badge}">${r.type}</span><div class="gs-body"><div class="gs-main">${hi(r.main,state.gs)}</div><div class="gs-sub">${esc(r.sub)}</div></div></div>`).join('');
+      if(drop){drop.innerHTML=html;drop.classList.add('open');}
+      else{const inner=document.getElementById('search-inner');if(inner){const d=document.createElement('div');d.id='gs-dropdown';d.className='open';d.innerHTML=html;inner.appendChild(d);}}
+      bindGsItems();
+    });
+    gsi.addEventListener('focus',()=>{state.gsOpen=true;const d=document.getElementById('gs-dropdown');if(d)d.classList.add('open');});
+  }
+  if(gsc)gsc.addEventListener('click',()=>{state.gs='';state.gsOpen=false;gsc.style.display='none';const i=document.getElementById('gs-input');if(i){i.value='';i.focus();}const d=document.getElementById('gs-dropdown');if(d)d.classList.remove('open');});
+  document.addEventListener('mousedown',e=>{const w=document.getElementById('search-wrap');if(w&&!w.contains(e.target)){const d=document.getElementById('gs-dropdown');if(d)d.classList.remove('open');state.gsOpen=false;}},{once:true});
+  bindGsItems();
+
+  // PO rows
+  document.querySelectorAll('[data-goto-po]').forEach(r=>r.addEventListener('click',()=>setState({view:'pos',selectedPO:r.dataset.gotoPo,expandedSku:null,detailTab:'skus',gs:'',gsOpen:false})));
+  document.getElementById('btn-back')?.addEventListener('click',()=>setState({selectedPO:null,expandedSku:null,detailTab:'skus'}));
+  document.getElementById('btn-back-client')?.addEventListener('click',()=>setState({selectedClient:null}));
+
+  // Client cards — click to go to detail
+  document.querySelectorAll('[data-goto-client]').forEach(card=>card.addEventListener('click',()=>setState({selectedClient:card.dataset.gotoClient})));
+
+  // Client search — live filter without re-render
+  const csInput=document.getElementById('client-search');
+  if(csInput){
+    csInput.addEventListener('input',e=>{
+      const q=e.target.value.toLowerCase();
+      document.querySelectorAll('[data-client-name]').forEach(card=>{
+        const name=card.dataset.clientName||'';
+        card.style.display=name.includes(q)?'':'none';
+      });
+    });
+    csInput.focus();
+  }
+
+  // Delete PO handlers
+  document.getElementById('show-delete-po')?.addEventListener('click',()=>{
+    const epos=enrichPOs();const po=epos.find(p=>p.id===state.selectedPO);
+    setState({modal:{type:'edit_po',po,confirmDelete:true}});
+  });
+  document.getElementById('cancel-delete')?.addEventListener('click',()=>{
+    const epos=enrichPOs();const po=epos.find(p=>p.id===state.selectedPO);
+    setState({modal:{type:'edit_po',po,confirmDelete:false}});
+  });
+  document.getElementById('confirm-delete-po')?.addEventListener('click',e=>{
+    const poId=e.target.dataset.poid;
+    const db=state.db;
+    // Remove PO and all related records
+    db.pos=db.pos.filter(p=>p.id!==poId);
+    const poSkuIds=db.po_skus.filter(ps=>ps.po_id===poId).map(ps=>ps.id);
+    db.po_skus=db.po_skus.filter(ps=>ps.po_id!==poId);
+    db.revisions=db.revisions.filter(r=>!poSkuIds.includes(r.po_sku_id));
+    db.deliveries=db.deliveries.filter(d=>!poSkuIds.includes(d.po_sku_id));
+    const siIds=db.sales_invoices.filter(si=>si.po_id===poId).map(si=>si.id);
+    db.sales_invoices=db.sales_invoices.filter(si=>si.po_id!==poId);
+    db.drs=db.drs.filter(d=>!siIds.includes(d.si_id));
+    setState({modal:null,selectedPO:null});
+  });
+  document.querySelectorAll('[data-expand-sku]').forEach(r=>r.addEventListener('click',()=>{const id=r.dataset.expandSku;setState({expandedSku:state.expandedSku===id?null:id});}));
+  document.querySelectorAll('[data-detail-tab]').forEach(b=>b.addEventListener('click',()=>setState({detailTab:b.dataset.detailTab})));
+
+  // SI and DR note editing
+  document.getElementById('sku-note-save')?.addEventListener('click',()=>{
+    const id=document.getElementById('sku-note-save').dataset.id;
+    const val=document.getElementById('sku-note-val').value;
+    const ps=db.po_skus.find(p=>p.id===id);if(ps)ps.notes=val;
+    setState({editingSkuNote:null});
+  });
+  document.getElementById('sku-note-cancel')?.addEventListener('click',()=>setState({editingSkuNote:null}));
+
+  document.querySelectorAll('[data-edit-si-note]').forEach(b=>b.addEventListener('click',()=>setState({editingSiNote:b.dataset.editSiNote,editingSkuNote:null,editingDrNote:null})));
+  document.getElementById('si-note-save')?.addEventListener('click',()=>{
+    const id=document.getElementById('si-note-save').dataset.id;
+    const val=document.getElementById('si-note-val').value;
+    const si=db.sales_invoices.find(s=>s.id===id);if(si)si.notes=val;
+    setState({editingSiNote:null});
+  });
+  document.getElementById('si-note-cancel')?.addEventListener('click',()=>setState({editingSiNote:null}));
+
+  document.querySelectorAll('[data-edit-dr-note]').forEach(b=>b.addEventListener('click',()=>setState({editingDrNote:b.dataset.editDrNote,editingSkuNote:null,editingSiNote:null})));
+  document.getElementById('dr-note-save')?.addEventListener('click',()=>{
+    const id=document.getElementById('dr-note-save').dataset.id;
+    const val=document.getElementById('dr-note-val').value;
+    const dr=db.drs.find(d=>d.id===id);if(dr)dr.notes=val;
+    setState({editingDrNote:null});
+  });
+  document.getElementById('dr-note-cancel')?.addEventListener('click',()=>setState({editingDrNote:null}));
+
+  // Toggle DR details
+  document.querySelectorAll('[data-toggle-dr]').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.toggleDr;setState({viewDR:state.viewDR===id?null:id});}));
+
+  // Toggle DR payment (quick click)
+  document.querySelectorAll('[data-toggle-dr-pay]').forEach(b=>b.addEventListener('click',e=>{
+    e.stopPropagation();
+    const dr=db.drs.find(d=>d.id===b.dataset.toggleDrPay);
+    if(!dr)return;
+    const cycle={UNPAID:'PAID',PAID:'UNPAID',PARTIAL_PAID:'PAID'};
+    dr.payment_status=cycle[dr.payment_status]||'UNPAID';
+    if(dr.payment_status==='PAID'&&!dr.payment_date)dr.payment_date=today();
+    setState({});
+  }));
+
+  // Modal open
+  document.querySelectorAll('[data-modal]').forEach(b=>b.addEventListener('click',()=>{
+    const epos=enrichPOs();
+    const po=epos.find(p=>p.id===state.selectedPO);
+    const drId=b.dataset.drId;
+    let drskuLabel='';
+    if(drId){
+      const dr=state.db.drs.find(d=>d.id===drId);
+      if(dr&&dr.sku_id){const s=state.db.skus.find(sk=>sk.id===dr.sku_id);if(s)drskuLabel=s.code+(s.description?' – '+s.description:'');}
+    }
+    setState({modal:{type:b.dataset.modal,po,siId:b.dataset.siId,drId,drskuLabel}});
+  }));
+  const closeModal=()=>setState({modal:null});
+  document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',closeModal));
+  document.getElementById('overlay')?.addEventListener('click',e=>{if(e.target.id==='overlay')closeModal();});
+
+  // PO list search — live DOM filter, no re-render
+  const poSearch=document.getElementById('po-search');
+  const poFilter=document.getElementById('po-filter');
+  function applyPOFilter(){
+    const q=(poSearch?poSearch.value:'').toLowerCase().trim();
+    const st=poFilter?poFilter.value:'ALL';
+    // persist to state without re-render
+    state.search=poSearch?poSearch.value:'';
+    state.filterStatus=st;
+    document.querySelectorAll('#po-tbody .po-row').forEach(row=>{
+      const txt=row.dataset.poText||'';
+      const rowStatus=row.dataset.poStatus||'';
+      const matchQ=!q||txt.includes(q);
+      const matchS=st==='ALL'||rowStatus===st;
+      row.style.display=(matchQ&&matchS)?'':'none';
+    });
+    // show empty message
+    const tbody=document.getElementById('po-tbody');
+    if(tbody){
+      const visible=tbody.querySelectorAll('.po-row:not([style*="display: none"]):not([style*="display:none"])');
+      let emptyRow=tbody.querySelector('.po-empty-row');
+      if(visible.length===0){
+        if(!emptyRow){emptyRow=document.createElement('tr');emptyRow.className='po-empty-row';emptyRow.innerHTML='<td colspan="9" class="empty">No POs match your search</td>';tbody.appendChild(emptyRow);}
+      } else {
+        if(emptyRow)emptyRow.remove();
+      }
+    }
+  }
+  if(poSearch){
+    poSearch.addEventListener('input',applyPOFilter);
+    // restore focus after render
+    if(state.view==='pos'&&!state.selectedPO){poSearch.focus();poSearch.setSelectionRange(poSearch.value.length,poSearch.value.length);}
+  }
+  if(poFilter) poFilter.addEventListener('change',applyPOFilter);
+
+  // SKU note edit button — stop propagation so it doesn't trigger row expand
+  document.querySelectorAll('.sku-note-edit-btn').forEach(b=>{
+    b.addEventListener('click',e=>{
+      e.stopPropagation();
+      setState({editingSkuNote:b.dataset.editSkuNote,editingSiNote:null,editingDrNote:null,expandedSku:null});
+    });
+  });
+
+  bindModalSaves();
+}
+
+function bindGsItems(){
+  const res=buildGsResults(state.gs);
+  document.querySelectorAll('.gs-item').forEach(item=>{
+    item.addEventListener('mousedown',e=>{
+      e.preventDefault();
+      const r=res[parseInt(item.dataset.gsi)];if(!r)return;
+      if(r.clientId){
+        setState({view:'clients',selectedClient:r.clientId,gs:'',gsOpen:false});
+      } else if(r.poId){
+        setState({view:'pos',selectedPO:r.poId,expandedSku:null,detailTab:r.tab||'skus',gs:'',gsOpen:false});
+      }
+    });
+  });
+}
+
+function bindModalSaves(){
+  const{modal,db}=state;if(!modal)return;
+  const g=id=>document.getElementById(id);
+
+  // DR Design Mix searchable combo
+  const drSkuSearch=g('f-drsku-search');
+  const drSkuHidden=g('f-drsku');
+  const drSkuOpts=g('drsku-opts');
+  const drSkuClear=g('f-drsku-clear');
+  if(drSkuSearch&&drSkuOpts){
+    const filterDrOpts=(q)=>{
+      const lq=q.toLowerCase();
+      drSkuOpts.querySelectorAll('.drsku-opt').forEach(opt=>{
+        opt.style.display=(opt.dataset.drskuLabel||'').toLowerCase().includes(lq)?'':'none';
+      });
+    };
+    drSkuSearch.addEventListener('focus',()=>{drSkuOpts.style.display='block';filterDrOpts(drSkuSearch.value);});
+    drSkuSearch.addEventListener('input',()=>{
+      filterDrOpts(drSkuSearch.value);
+      drSkuOpts.style.display='block';
+      if(drSkuHidden)drSkuHidden.value='';
+      if(drSkuClear)drSkuClear.style.display=drSkuSearch.value?'block':'none';
+    });
+    drSkuOpts.querySelectorAll('.drsku-opt').forEach(opt=>{
+      opt.addEventListener('mousedown',e=>{
+        e.preventDefault();
+        if(drSkuHidden)drSkuHidden.value=opt.dataset.drskuId;
+        if(drSkuSearch)drSkuSearch.value=opt.dataset.drskuLabel;
+        if(drSkuClear)drSkuClear.style.display='block';
+        drSkuOpts.style.display='none';
+      });
+    });
+  }
+  if(drSkuClear){
+    drSkuClear.addEventListener('click',()=>{
+      if(drSkuSearch){drSkuSearch.value='';drSkuSearch.focus();}
+      if(drSkuHidden)drSkuHidden.value='';
+      drSkuClear.style.display='none';
+      if(drSkuOpts){drSkuOpts.style.display='block';drSkuOpts.querySelectorAll('.drsku-opt').forEach(o=>o.style.display='');}
+    });
+  }
+
+  // SKU searchable combo
+  const skuSearchInput=g('f-sku-search');
+  const skuHidden=g('f-sku');
+  const skuOpts=g('sku-opts');
+  const skuClear=g('f-sku-clear');
+  if(skuSearchInput&&skuOpts){
+    const filterOpts=(q)=>{
+      const lq=q.toLowerCase();
+      skuOpts.querySelectorAll('.sku-opt').forEach(opt=>{
+        const txt=(opt.dataset.skuLabel||'').toLowerCase();
+        opt.style.display=txt.includes(lq)?'':'none';
+      });
+    };
+    skuSearchInput.addEventListener('focus',()=>{skuOpts.style.display='block';filterOpts(skuSearchInput.value);});
+    skuSearchInput.addEventListener('input',()=>{
+      filterOpts(skuSearchInput.value);
+      skuOpts.style.display='block';
+      // clear selection if user types something new
+      if(skuHidden)skuHidden.value='';
+      if(skuClear)skuClear.style.display=skuSearchInput.value?'block':'none';
+    });
+    skuOpts.querySelectorAll('.sku-opt').forEach(opt=>{
+      opt.addEventListener('mousedown',e=>{
+        e.preventDefault();
+        if(skuHidden)skuHidden.value=opt.dataset.skuId;
+        if(skuSearchInput)skuSearchInput.value=opt.dataset.skuLabel;
+        if(skuClear)skuClear.style.display='block';
+        skuOpts.style.display='none';
+      });
+    });
+    document.addEventListener('mousedown',e=>{
+      if(!skuSearchInput.contains(e.target)&&!skuOpts.contains(e.target)){skuOpts.style.display='none';}
+    },{capture:true,once:false});
+  }
+  if(skuClear){
+    skuClear.addEventListener('click',()=>{
+      if(skuSearchInput){skuSearchInput.value='';skuSearchInput.focus();}
+      if(skuHidden)skuHidden.value='';
+      skuClear.style.display='none';
+      if(skuOpts){skuOpts.style.display='block';skuOpts.querySelectorAll('.sku-opt').forEach(o=>o.style.display='');}
+    });
+  }
+
+  g('m-save-po')?.addEventListener('click',()=>{
+    const pono=g('f-pono').value.trim(),client=g('f-client').value,date=g('f-date').value,vat=g('f-vat').value,notes=g('f-notes').value.trim();
+    if(!pono||!client||!date){setState({modal:{...modal,err:'PO #, client and date required.',pono,client,date,vat,notes}});return;}
+    if(db.pos.some(p=>p.po_number===pono)){setState({modal:{...modal,err:'PO # already exists.',pono,client,date,vat,notes}});return;}
+    db.pos.unshift({id:uid(),po_number:pono,client_id:client,date,vat_type:vat,notes,status:'OPEN'});
+    setState({modal:null});
+  });
+
+  g('m-save-editpo')?.addEventListener('click',()=>{
+    const status=g('f-postatus').value,vat=g('f-editvat').value,notes=g('f-ponotes').value.trim();
+    const newDate=g('f-edit-date')?.value||modal.po.date;
+    const newPono=g('f-edit-pono')?.value.trim()||modal.po.po_number;
+    const po=db.pos.find(p=>p.id===modal.po.id);
+    if(po){po.status=status;po.notes=notes;po.vat_type=vat;po.date=newDate;po.po_number=newPono;}
+    setState({modal:null});
+  });
+
+  g('m-save-posku')?.addEventListener('click',()=>{
+    const sku=g('f-sku')?.value||'',qty=parseFloat(g('f-qty')?.value),price=parseFloat(g('f-price')?.value),skunotes=(g('f-skunotes')?.value||'').trim(),skuLabel=(g('f-sku-search')?.value||'').trim();
+    if(!sku||!qty||!price){setState({modal:{...modal,err:'Please select a SKU, enter quantity and price.',sku,qty,price,skunotes,skuLabel}});return;}
+    db.po_skus.push({id:uid(),po_id:modal.po.id,sku_id:sku,ordered_qty:qty,delivered_qty:0,base_price:price,current_price:price,notes:skunotes});
+    setState({modal:null});
+  });
+
+  g('m-save-del')?.addEventListener('click',()=>{
+    const posku=g('f-posku').value,qty=parseFloat(g('f-delqty').value),date=g('f-deldate').value,notes=g('f-delnotes').value.trim();
+    const ps=db.po_skus.find(x=>x.id===posku);
+    if(!posku||!qty||!date){setState({modal:{...modal,err:'Required fields missing.',posku,qty,date,notes}});return;}
+    if(qty<=0){setState({modal:{...modal,err:'Qty must be positive.',posku,qty,date,notes}});return;}
+    const rem=ps.ordered_qty-ps.delivered_qty;
+    if(qty>rem+0.001){setState({modal:{...modal,err:`Max: ${fmt(rem)} m³`,posku,qty,date,notes}});return;}
+    db.deliveries.push({id:uid(),po_sku_id:posku,qty,date,notes});
+    ps.delivered_qty=+(ps.delivered_qty+qty).toFixed(4);
+    setState({modal:null});
+  });
+
+  g('m-save-rev')?.addEventListener('click',()=>{
+    const posku=g('f-revsku').value,np=parseFloat(g('f-newprice').value),reason=g('f-revreason').value.trim();
+    if(!posku||!np||np<=0){setState({modal:{...modal,err:'SKU and valid price required.',posku,price:np,reason}});return;}
+    const ps=db.po_skus.find(x=>x.id===posku);
+    db.revisions.push({id:uid(),po_sku_id:posku,old_price:ps.current_price,new_price:np,reason,date:today()});
+    ps.current_price=np;setState({modal:null});
+  });
+
+  g('m-save-si')?.addEventListener('click',()=>{
+    const sinum=g('f-sinum').value.trim(),sidate=g('f-sidate').value,siamt=parseFloat(g('f-siamt').value),sinotes=g('f-sinotes').value.trim(),sipay=g('f-sipay').value;
+    if(!sinum||!sidate||!siamt){setState({modal:{...modal,err:'SI #, date and amount required.',sinum,sidate,siamt,sinotes,sipay}});return;}
+    if(modal.type==='edit_invoice'){
+      const si=db.sales_invoices.find(s=>s.id===modal.siId);
+      if(si){si.si_number=sinum;si.date=sidate;si.amount=siamt;si.notes=sinotes;si.payment_status=sipay;}
+    } else {
+      db.sales_invoices.push({id:uid(),po_id:modal.po.id,si_number:sinum,date:sidate,amount:siamt,notes:sinotes,payment_status:sipay});
+    }
+    setState({modal:null,detailTab:'invoices'});
+  });
+
+  g('m-save-dr')?.addEventListener('click',()=>{
+    const drnum=g('f-drnum').value.trim(),drdate=g('f-drdate').value;
+    const drsku=g('f-drsku')?.value||'',drvol=parseFloat(g('f-drvol').value);
+    if(!drnum||!drdate||!drsku||!drvol||drvol<=0){setState({modal:{...modal,err:'DR #, date, design mix and volume are required.'}});return;}
+    const plate=g('f-plate').value.trim(),driver=g('f-driver').value.trim();
+    const site=g('f-site').value.trim(),drclient=g('f-drclient').value.trim(),inspector=g('f-inspector').value.trim();
+    const drremarks=g('f-drremarks').value.trim(),drpay=g('f-drpay').value,drpaydate=g('f-drpaydate').value,drnotes=g('f-drnotes').value.trim();
+    if(modal.type==='edit_dr'){
+      const dr=db.drs.find(d=>d.id===modal.drId);
+      if(dr){Object.assign(dr,{dr_number:drnum,date:drdate,truck_plate:plate,driver_name:driver,site_address:site,client_name:drclient,site_inspector:inspector,sku_id:drsku,volume:drvol,remarks:drremarks,payment_status:drpay,payment_date:drpaydate,notes:drnotes});}
+    } else {
+      db.drs.push({id:uid(),si_id:modal.siId,dr_number:drnum,date:drdate,truck_plate:plate,driver_name:driver,site_address:site,client_name:drclient,site_inspector:inspector,sku_id:drsku,volume:drvol,remarks:drremarks,payment_status:drpay,payment_date:drpaydate,notes:drnotes});
+    }
+    setState({modal:null,detailTab:'invoices'});
+  });
+
+  g('m-save-sku')?.addEventListener('click',()=>{
+    const code=g('f-skucode').value.trim(),desc=g('f-skudesc').value.trim();
+    if(!code){setState({modal:{...modal,err:'Code required.',code,desc}});return;}
+    if(db.skus.some(s=>s.code===code)){setState({modal:{...modal,err:'Code exists.',code,desc}});return;}
+    db.skus.push({id:uid(),code,description:desc,unit:'m3'});setState({modal:null});
+  });
+
+  g('m-save-client')?.addEventListener('click',()=>{
+    const name=g('f-cname').value.trim();
+    if(!name){setState({modal:{...modal,err:'Name required.',name}});return;}
+    db.clients.push({id:uid(),name});setState({modal:null});
+  });
+}
+
+render();
+</script>
+</body>
+</html>
